@@ -12,7 +12,34 @@ from lib.datasets.track_dataset import TrackDataset
 from .vit import vit_huge
 from .modules import *
 from .smpl import SMPL
-from ..pipeline.tools import parse_chunks
+
+
+def parse_chunks(frame, boxes, min_len=16):
+    """Split discontinuous tracks and discard segments shorter than min_len."""
+    frame_chunks = []
+    boxes_chunks = []
+    step = frame[1:] - frame[:-1]
+    step = np.concatenate([[0], step])
+    breaks = np.where(step != 1)[0]
+
+    start = 0
+    for bk in breaks:
+        f_chunk = frame[start:bk]
+        b_chunk = boxes[start:bk]
+        start = bk
+        if len(f_chunk) >= min_len:
+            frame_chunks.append(f_chunk)
+            boxes_chunks.append(b_chunk)
+
+        if bk == breaks[-1]:
+            f_chunk = frame[bk:]
+            b_chunk = boxes[bk:]
+            if len(f_chunk) >= min_len:
+                frame_chunks.append(f_chunk)
+                boxes_chunks.append(b_chunk)
+
+    return frame_chunks, boxes_chunks
+
 
 autocast = torch.amp.autocast
 
